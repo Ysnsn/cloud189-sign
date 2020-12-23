@@ -6,12 +6,22 @@ s = requests.Session()
 username = ""
 password = ""
 
+
+#Server酱报错推送提醒，需要填下下面的key，官网：https://sc.ftqq.com/3.version
+SCKEY = ""
+#推送url
+scurl = f"https://sc.ftqq.com/{SCKEY}.send"
+
 if(username == "" or password == ""):
     username = input("账号：")
     password = input("密码：")
 
 def main():
-    login(username, password)
+    msg = login(username, password)
+    if(msg == "error"):
+        return None
+    else:
+        pass
     rand = str(round(time.time()*1000))
     surl = f'https://api.cloud.189.cn/mkt/userSign.action?rand={rand}&clientType=TELEANDROID&version=8.6.3&model=SM-G930K'
     url = f'https://m.cloud.189.cn/v2/drawPrizeMarketDetails.action?taskId=TASK_SIGNIN&activityId=ACT_SIGNIN'
@@ -22,6 +32,7 @@ def main():
         "Host" : "m.cloud.189.cn",
         "Accept-Encoding" : "gzip, deflate",
     }
+    #签到
     response = s.get(surl,headers=headers)
     netdiskBonus = response.json()['netdiskBonus']
     if(response.json()['isSign'] == "false"):
@@ -34,15 +45,35 @@ def main():
         "Host" : "m.cloud.189.cn",
         "Accept-Encoding" : "gzip, deflate",
     }
+    #第一次抽奖
     response = s.get(url,headers=headers)
     if ("errorCode" in response.text):
-        print(response.text)
+        if(response.json()['errorCode'] == "User_Not_Chance"):
+            print("抽奖次数不足")
+        else:
+            print(response.text)
+            if(SCKEY != ""):
+                data = {
+                    "text" : "抽奖出错",
+                    "desp" : response.text
+                    }
+                sc = requests.post(scurl, data=data)
     else:
         description = response.json()['description']
         print(f"抽奖获得{description}")
+    #第二次抽奖
     response = s.get(url2,headers=headers)
     if ("errorCode" in response.text):
-        print(response.text)
+        if(response.json()['errorCode'] == "User_Not_Chance"):
+            print("抽奖次数不足")
+        else:
+            print(response.text)
+            if(SCKEY != ""):
+                data = {
+                    "text" : "第二次抽奖出错",
+                    "desp" : response.text
+                    }
+                sc = requests.post(scurl, data=data)
     else:
         description = response.json()['description']
         print(f"抽奖获得{description}")
@@ -122,7 +153,17 @@ def login(username, password):
     if(r.json()['result'] == 0):
         print(r.json()['msg'])
     else:
-        print(r.json()['msg'])
+        if(SCKEY == ""):
+            print(r.json()['msg'])
+        else:
+            msg = r.json()['msg']
+            print(msg)
+            data = {
+                "text" : "登录出错",
+                "desp" : f"错误提示：{msg}"
+                }
+            sc = requests.post(scurl, data=data)
+        return "error"
     redirect_url = r.json()['toUrl']
     r = s.get(redirect_url)
     return s
@@ -130,4 +171,3 @@ def login(username, password):
 
 if __name__ == "__main__":
     main()
-

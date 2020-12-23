@@ -5,20 +5,22 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  watch:
+    types: started
   schedule:
-    - cron: 0 1,12 * * *
+    - cron: 0 2,14 * * *
 
 jobs:
-  build:
+  Cloud189Checkin:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install Python
-      run: |
-        sudo apt update && \
-        sudo apt install python3
+    - name: 'setup python'
+      uses: actions/setup-python@master
+      with: 
+        python-version: 3.7
       
     - name: requirements
       run: |
@@ -26,13 +28,12 @@ jobs:
         
     - name: Checkin
       run: |
-        user='${{ secrets.USER }}'
-        pwd='${{ secrets.PWD }}'
-        
+        sed -i 's|SCKEY = ""|SCKEY = "${{ secrets.SCKEY }}"|' C189Checkin.py
+
+        user=${{ secrets.USER }}
+        pwd=${{ secrets.PWD }}
         user_list=()
         pwd_list=()
-
-        IFS=" "
 
         for u in ${user[*]}
         do
@@ -43,7 +44,7 @@ jobs:
         do
         pwd_list[${#pwd_list[*]}]=${p}
         done
-
+        
         user_num=${#user_list[*]}
         pwd_num=${#pwd_list[*]}
 
@@ -54,10 +55,21 @@ jobs:
         echo "共有 $user_num 个账号，即将开始签到"
         fi
 
+        random_time=$(($RANDOM % 45))
+        echo "等待 ${random_time} 分钟后开始签到"
+        for((i=1;i<=${random_time};i++));  
+        do
+        echo "倒计时:剩余 $[${random_time}-$i] 分钟"
+        sleep 1m
+        done
+
         for ((i=0;i<$user_num;i++))
         do
+        echo "----------"
+        echo "签到账号$(($i+1))"
         python3 C189Checkin.py <<EOF
         ${user_list[$i]}
         ${pwd_list[$i]}
         EOF
+        echo "----------"
         done
