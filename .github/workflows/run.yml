@@ -2,13 +2,13 @@ name: Cloud189Checkin
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
   watch:
     types: started
   schedule:
-    - cron: 0 2,14 * * *
+    - cron: 1 0 * * *
 
 jobs:
   Cloud189Checkin:
@@ -28,10 +28,57 @@ jobs:
         
     - name: Checkin
       run: |
-        sed -i 's|SCKEY = ""|SCKEY = "${{ secrets.SCKEY }}"|' C189Checkin.py
+        # Start Checkin
+        WorkWeiBot="${{ secrets.WWBOT }}"
+        DingDingBot="${{ secrets.DDBOT }}"
+        SCKEY="${{ secrets.SCKEY }}"
 
-        user=${{ secrets.USER }}
-        pwd=${{ secrets.PWD }}
+        function WorkWei()
+        {
+          echo -n "企业微信机器人："
+          curl -s "${WorkWeiBot}" \
+            -H 'Content-Type: application/json' \
+            -d '
+            {
+              "msgtype": "text",
+              "text": {
+                  "content": "'"`date "+%F %T %A"`$1"'"
+              }
+            }'
+          echo .
+        }
+        function DingDing()
+        {
+          echo -n "钉钉机器人："
+          curl -s "${DingDingBot}" \
+            -H 'Content-Type: application/json' \
+            -d '
+            {
+              "msgtype": "text",
+              "text": {
+                  "content": "'"`date "+%F %T %A"`$1"'"
+              }
+            }'
+          echo .
+        }
+        function FTQQ()
+        {
+          echo -n "Server酱："
+          url="https://sc.ftqq.com/${SCKEY}.send"
+          data="`date "+%F %T %A"`\n$2"
+          n='
+        '
+          n1='\\n'
+          data=${data//${n1}/${n}${n}}
+          data='text='"$1"'&desp='"${data}"
+        
+          curl -s "${url}" \
+            -d "${data}"
+          echo .
+        }
+
+        user="${{ secrets.USER }}"
+        pwd="${{ secrets.PWD }}"
         user_list=()
         pwd_list=()
 
@@ -52,24 +99,39 @@ jobs:
         echo "账号和密码个数不对应"
         exit 1
         else
-        echo "共有 $user_num 个账号，即将开始签到"
+        echo "共有 $user_num 个账号等待签到"
         fi
 
-        random_time=$(($RANDOM % 45))
-        echo "等待 ${random_time} 分钟后开始签到"
-        for((i=1;i<=${random_time};i++));  
-        do
-        echo "倒计时:剩余 $[${random_time}-$i] 分钟"
-        sleep 1m
-        done
-
+        random_time=$(($RANDOM % 5 + 1))
         for ((i=0;i<$user_num;i++))
         do
+
+        echo "倒计时 ${random_time} 分钟后开始签到"
+        for((j=0;j<${random_time};j++));
+        do
+        echo "$[${random_time}-$j]"
+        sleep 1m
+        done
+        echo "0"
+
         echo "----------"
         echo "签到账号$(($i+1))"
-        python3 C189Checkin.py <<EOF
+        r=`python3 C189Checkin.py <<EOF
         ${user_list[$i]}
         ${pwd_list[$i]}
-        EOF
+        EOF`
+        n='
+        '
+        n1="\n"
+        r=${r//${n}/${n1}}
+        echo -e "${r}"
+        y1='"'
+        y2='\"'
+        r=${r//${y1}/${y2}}
+        result="${result}\n${r}"
         echo "----------"
         done
+
+        [ g"${WorkWeiBot}" != g"" ] && WorkWei "${result}" || echo "未设置企业微信通知"
+        [ g"${DingDingBot}" != g"" ] && DingDing "${result}" || echo "未设置钉钉通知"
+        [ g"${SCKEY}" != g"" ] && FTQQ "天翼签到" "${result}" || echo "未设置Server酱通知"

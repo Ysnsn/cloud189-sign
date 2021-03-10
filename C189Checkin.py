@@ -6,14 +6,9 @@ s = requests.Session()
 username = ""
 password = ""
 
-
-#Server酱报错推送提醒，需要填下下面的key，官网：https://sc.ftqq.com/3.version
-SCKEY = ""
-#推送url
-scurl = f"https://sc.ftqq.com/{SCKEY}.send"
-
 if(username == "" or password == ""):
     username = input("账号：")
+   # print(username[:3] + '****' + username[7:])
     password = input("密码：")
 
 def main():
@@ -35,10 +30,7 @@ def main():
     #签到
     response = s.get(surl,headers=headers)
     netdiskBonus = response.json()['netdiskBonus']
-    if(response.json()['isSign'] == "false"):
-        print(f"未签到，签到获得{netdiskBonus}M空间")
-    else:
-        print(f"已经签到过了，签到获得{netdiskBonus}M空间")
+    print(f"签到获得{netdiskBonus}M空间")
     headers = {
         'User-Agent':'Mozilla/5.0 (Linux; Android 5.1.1; SM-G930K Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.136 Mobile Safari/537.36 Ecloud/8.6.3 Android/22 clientId/355325117317828 clientModel/SM-G930K imsi/460071114317824 clientChannelId/qq proVersion/1.0.6',
         "Referer" : "https://m.cloud.189.cn/zhuanti/2016/sign/index.jsp?albumBackupOpened=1",
@@ -47,36 +39,34 @@ def main():
     }
     #第一次抽奖
     response = s.get(url,headers=headers)
-    if ("errorCode" in response.text):
-        if(response.json()['errorCode'] == "User_Not_Chance"):
-            print("抽奖次数不足")
-        else:
-            print(response.text)
-            if(SCKEY != ""):
-                data = {
-                    "text" : "抽奖出错",
-                    "desp" : response.text
-                    }
-                sc = requests.post(scurl, data=data)
+    if ("prizeName" in response.text):
+        #description = response.json()['description']
+        #print(f"抽奖获得{description}")
+        prizeName = response.json()['prizeName']
+        print(f"抽奖获得{prizeName}")
     else:
-        description = response.json()['description']
-        print(f"抽奖获得{description}")
+        try:
+            if(response.json()['errorCode'] == "User_Not_Chance"):
+                print("抽奖次数不足")
+            else:
+                print(response.text)
+        except:
+                print(str(response.status_code) + response.text)
     #第二次抽奖
     response = s.get(url2,headers=headers)
-    if ("errorCode" in response.text):
-        if(response.json()['errorCode'] == "User_Not_Chance"):
-            print("抽奖次数不足")
-        else:
-            print(response.text)
-            if(SCKEY != ""):
-                data = {
-                    "text" : "第二次抽奖出错",
-                    "desp" : response.text
-                    }
-                sc = requests.post(scurl, data=data)
+    if ("prizeName" in response.text):
+        #description = response.json()['description']
+        #print(f"抽奖获得{description}")
+        prizeName = response.json()['prizeName']
+        print(f"抽奖获得{prizeName}")
     else:
-        description = response.json()['description']
-        print(f"抽奖获得{description}")
+        try:
+            if(response.json()['errorCode'] == "User_Not_Chance"):
+                print("抽奖次数不足")
+            else:
+                print(response.text)
+        except:
+                print(str(response.status_code) + response.text)
 
 BI_RM = list("0123456789abcdefghijklmnopqrstuvwxyz")
 def int2char(a):
@@ -153,21 +143,11 @@ def login(username, password):
     if(r.json()['result'] == 0):
         print(r.json()['msg'])
     else:
-        if(SCKEY == ""):
-            print(r.json()['msg'])
-        else:
-            msg = r.json()['msg']
-            print(msg)
-            data = {
-                "text" : "登录出错",
-                "desp" : f"错误提示：{msg}"
-                }
-            sc = requests.post(scurl, data=data)
+        print(r.json()['msg'])
         return "error"
     redirect_url = r.json()['toUrl']
     r = s.get(redirect_url)
     return s
-    
 
 if __name__ == "__main__":
     main()
